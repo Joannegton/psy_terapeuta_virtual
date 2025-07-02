@@ -1,81 +1,62 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/message.dart';
+import 'package:psy_therapist/models/message.dart';
 
 class FirestoreService {
-  static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  // Instância do Cloud Firestore
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  late final CollectionReference<Message> _messagesRef;
+  final String _sessionId;
 
-  // Salvar mensagens do chat
-  static Future<void> saveMessages(String userId, List<Message> messages) async {
+  FirestoreService({required String sessionId}) : _sessionId = sessionId {
+    _messagesRef = _db
+        .collection('chats')
+        .doc(_sessionId)
+        .collection('messages')
+        .withConverter<Message>(
+          fromFirestore: (snapshots, _) => Message.fromJson(snapshots.data()!),
+          toFirestore: (message, _) => message.toJson(),
+        );
+  }
+
+  /// Carrega as mensagens de uma sessão de uma única vez.
+  Future<List<Message>> loadMessages() async {
+    final snapshot =
+        await _messagesRef.orderBy('timestamp', descending: false).get();
+    return snapshot.docs.map((doc) => doc.data()).toList();
+  }
+
+  /// Salva uma única nova mensagem no Firestore.
+  Future<void> addMessage(Message message) async {
     try {
-      final batch = _firestore.batch();
-      final chatRef = _firestore.collection('users').doc(userId).collection('chats');
-
-      // Limpar mensagens antigas
-      final oldMessages = await chatRef.get();
-      for (final doc in oldMessages.docs) {
-        batch.delete(doc.reference);
-      }
-
-      // Adicionar novas mensagens
-      for (final message in messages) {
-        final docRef = chatRef.doc(message.id);
-        batch.set(docRef, message.toJson());
-      }
-
-      await batch.commit();
+      await _messagesRef.doc(message.id).set(message);
     } catch (e) {
-      throw Exception('Erro ao salvar mensagens: $e');
+      print("Erro ao salvar mensagem no Firestore: $e");
+      rethrow;
     }
   }
 
-  // Carregar mensagens do chat
-  static Future<List<Message>> loadMessages(String userId) async {
-    try {
-      final snapshot = await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('chats')
-          .orderBy('timestamp')
-          .get();
+  /// Apaga todas as mensagens da sessão de chat atual.
+  Future<void> clearMessages() async {
+    final snapshot = await _messagesRef.get();
+    if (snapshot.docs.isEmpty) return;
 
-      return snapshot.docs
-          .map((doc) => Message.fromJson(doc.data()))
-          .toList();
-    } catch (e) {
-      return [];
+    final batch = _db.batch();
+    for (final doc in snapshot.docs) {
+      batch.delete(doc.reference);
     }
+    await batch.commit();
   }
 
-  // Limpar mensagens do chat
-  static Future<void> clearMessages(String userId) async {
+  /// Método estático para salvar dados de analytics.
+  static Future<void> saveUsageAnalytics(
+      String userId, Map<String, dynamic> data) async {
     try {
-      final batch = _firestore.batch();
-      final chatRef = _firestore.collection('users').doc(userId).collection('chats');
-      
-      final messages = await chatRef.get();
-      for (final doc in messages.docs) {
-        batch.delete(doc.reference);
-      }
-
-      await batch.commit();
-    } catch (e) {
-      throw Exception('Erro ao limpar mensagens: $e');
-    }
-  }
-
-  // Salvar analytics de uso
-  static Future<void> saveUsageAnalytics(String userId, Map<String, dynamic> data) async {
-    try {
-      await _firestore
+      await FirebaseFirestore.instance
           .collection('users')
           .doc(userId)
           .collection('analytics')
-          .add({
-        ...data,
-        'timestamp': FieldValue.serverTimestamp(),
-      });
+          .add({...data, 'timestamp': FieldValue.serverTimestamp()});
     } catch (e) {
-      // Analytics não são críticos, apenas log do erro
       print('Erro ao salvar analytics: $e');
     }
   }

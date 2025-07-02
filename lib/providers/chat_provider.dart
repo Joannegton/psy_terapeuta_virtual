@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import '../models/message.dart';
-import '../services/openai_service.dart';
 import '../services/firestore_service.dart';
+import '../services/gemini_service.dart';
 
 class ChatProvider extends ChangeNotifier {
   final List<Message> _messages = [];
@@ -10,10 +10,13 @@ class ChatProvider extends ChangeNotifier {
   bool _isConversationEnded = false;
   final Uuid _uuid = const Uuid();
   String? _userId;
+  FirestoreService? _firestoreService;
 
   List<Message> get messages => List.unmodifiable(_messages);
   bool get isLoading => _isLoading;
   bool get isConversationEnded => _isConversationEnded;
+  
+  final GeminiService _geminiService = GeminiService();
 
   static const String _welcomeMessage = 
     "Olá, eu sou o Psy! 👋\n\nEstou aqui para conversar com você sobre como está se sentindo. Este é um espaço seguro onde podemos falar sobre suas emoções, pensamentos e qualquer coisa que esteja em sua mente.\n\nComo está se sentindo hoje?";
@@ -21,6 +24,7 @@ class ChatProvider extends ChangeNotifier {
   // Inicializar chat para usuário específico
   Future<void> initializeChat(String userId) async {
     _userId = userId;
+    _firestoreService = FirestoreService(sessionId: userId);
     await _loadMessages();
     
     if (_messages.isEmpty) {
@@ -31,10 +35,10 @@ class ChatProvider extends ChangeNotifier {
   }
 
   Future<void> _loadMessages() async {
-    if (_userId == null) return;
+    if (_firestoreService == null) return;
 
     try {
-      final savedMessages = await FirestoreService.loadMessages(_userId!);
+      final savedMessages = await _firestoreService!.loadMessages();
       _messages.clear();
       _messages.addAll(savedMessages);
     } catch (e) {
@@ -65,6 +69,7 @@ class ChatProvider extends ChangeNotifier {
       timestamp: DateTime.now(),
     );
     _messages.add(userMessage);
+    _firestoreService?.addMessage(userMessage); // Salva a mensagem do usuário imediatamente
 
     // Adicionar mensagem de loading da IA
     final loadingMessage = Message(
@@ -80,8 +85,10 @@ class ChatProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Enviar para OpenAI
-      final response = await OpenAIService.sendMessage(_messages.where((m) => !m.isLoading).toList());
+      // Envia o histórico para o Gemini, mas sem a mensagem de "loading"
+      final historyForApi =
+          _messages.where((msg) => !msg.isLoading).toList();
+      final response = await _geminiService.sendMessage(historyForApi);
       
       // Remover mensagem de loading
       _messages.removeLast();
@@ -94,14 +101,12 @@ class ChatProvider extends ChangeNotifier {
         timestamp: DateTime.now(),
       );
       _messages.add(aiMessage);
+      _firestoreService?.addMessage(aiMessage); // Salva a resposta da IA
 
       if (isGoodbye) {
         _isConversationEnded = true;
       }
 
-      // Salvar mensagens no Firebase
-      await FirestoreService.saveMessages(_userId!, _messages);
-      
       // Salvar analytics
       await FirestoreService.saveUsageAnalytics(_userId!, {
         'action': 'message_sent',
@@ -132,22 +137,23 @@ class ChatProvider extends ChangeNotifier {
   }
 
   Future<void> startNewConversation() async {
-    if (_userId == null) return;
+    if (_firestoreService == null) return;
     
     _messages.clear();
     _isConversationEnded = false;
-    await FirestoreService.clearMessages(_userId!);
+    await _firestoreService!.clearMessages();
     _addWelcomeMessage();
-    await FirestoreService.saveMessages(_userId!, _messages);
+    // Salva a nova mensagem de boas-vindas no Firestore
+    await _firestoreService!.addMessage(_messages.first);
     notifyListeners();
   }
 
   Future<void> clearChat() async {
-    if (_userId == null) return;
+    if (_firestoreService == null) return;
     
     _messages.clear();
     _isConversationEnded = false;
-    await FirestoreService.clearMessages(_userId!);
+    await _firestoreService!.clearMessages();
     notifyListeners();
   }
 }
