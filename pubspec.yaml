@@ -1,0 +1,48 @@
+name: psy_therapist
+description: Psy - Seu Terapeuta Virtual focado em saúde mental
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: ">=3.10.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # State Management
+  provider: ^6.1.1
+  
+  # HTTP requests
+  http: ^1.1.0
+  
+  # Local storage
+  shared_preferences: ^2.2.2
+  
+  # JSON handling
+  json_annotation: ^4.8.1
+  
+  # UI
+  google_fonts: ^6.1.0
+  flutter_animate: ^4.2.0+1
+  
+  # Utils
+  uuid: ^4.1.0
+  
+  # Firebase
+  firebase_core: ^2.24.2
+  firebase_auth: ^4.15.3
+  cloud_firestore: ^4.13.6
+  firebase_analytics: ^10.7.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  json_serializable: ^6.7.1
+  build_runner: ^2.4.7
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
