@@ -1,8 +1,10 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:psy_therapist/main.dart';
 import 'package:psy_therapist/widgets/custom_textfield.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../providers/auth_provider.dart';
 import 'login_screen.dart';
 
@@ -22,9 +24,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _acceptTerms = false;
+  bool _isButtonEnabled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController.addListener(_updateButtonState);
+    _emailController.addListener(_updateButtonState);
+    _passwordController.addListener(_updateButtonState);
+    _confirmPasswordController.addListener(_updateButtonState);
+  }
 
   @override
   void dispose() {
+    _nameController.removeListener(_updateButtonState);
+    _emailController.removeListener(_updateButtonState);
+    _passwordController.removeListener(_updateButtonState);
+    _confirmPasswordController.removeListener(_updateButtonState);
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
@@ -32,16 +48,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
+  void _updateButtonState() {
+    final isEnabled = _nameController.text.isNotEmpty &&
+        _emailController.text.isNotEmpty &&
+        _passwordController.text.isNotEmpty &&
+        _confirmPasswordController.text.isNotEmpty &&
+        _acceptTerms;
+    if (_isButtonEnabled != isEnabled) {
+      setState(() {
+        _isButtonEnabled = isEnabled;
+      });
+    }
+  }
+
+  Future<void> _launchURL(String urlString) async {
+    final Uri url = Uri.parse(urlString);
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      if (mounted) {
+        context.showSnackBar(
+          'Não foi possível abrir o link: $urlString',
+          isError: true,
+        );
+      }
+    }
+  }
+
   Future<void> _handleRegister() async {
     if (!_formKey.currentState!.validate()) return;
-    
-    if (!_acceptTerms) {
-      context.showSnackBar(
-        'Você deve aceitar os termos de uso',
-        isError: true,
-      );
-      return;
-    }
 
     final authProvider = context.read<AuthProvider>();
     
@@ -51,11 +84,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
       displayName: _nameController.text.trim(),
     );
 
-    if (!success && mounted) {
-      context.showSnackBar(
-        authProvider.error ?? 'Erro ao criar conta',
-        isError: true,
-      );
+    if (mounted) {
+      if (success) {
+        context.showSnackBar(
+          'Conta criada com sucesso! Por favor, faça o login.',
+        );
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+        );
+      } else {
+        context.showSnackBar(
+          authProvider.error ?? 'Erro ao criar conta',
+          isError: true,
+        );
+      }
     }
   }
 
@@ -68,7 +111,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Theme.of(context).colorScheme.primary.withOpacity(0.1),
+              Theme.of(context).colorScheme.primary.withAlpha(25),
               Theme.of(context).colorScheme.surface,
             ],
           ),
@@ -83,7 +126,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 children: [
                   const SizedBox(height: 20),
                   
-                  // Logo e título
                   Column(
                     children: [
                       Container(
@@ -125,7 +167,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       Text(
                         'Junte-se ao Psy e comece sua jornada',
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                          color: Theme.of(context).colorScheme.onSurface.withAlpha(178),
                         ),
                       ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.3),
                     ],
@@ -133,7 +175,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   
                   const SizedBox(height: 40),
                   
-                  // Campos de entrada
                   CustomTextField(
                     controller: _nameController,
                     label: 'Nome completo',
@@ -229,15 +270,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   
                   const SizedBox(height: 24),
                   
-                  // Checkbox termos
                   Row(
                     children: [
                       Checkbox(
                         value: _acceptTerms,
                         onChanged: (value) {
-                          setState(() {
-                            _acceptTerms = value ?? false;
-                          });
+                          _acceptTerms = value ?? false;
+                          _updateButtonState();
                         },
                         activeColor: Theme.of(context).colorScheme.primary,
                       ),
@@ -250,17 +289,31 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               TextSpan(
                                 text: 'Termos de Uso',
                                 style: TextStyle(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                                    color: Theme.of(context).colorScheme.primary,
+                                    fontWeight: FontWeight.w600,
+                                    decoration: TextDecoration.underline,
+                                    decorationColor:
+                                        Theme.of(context).colorScheme.primary),
+                                recognizer: TapGestureRecognizer()
+                                  ..onTap = () {
+                                    _launchURL(
+                                        'https://github.com/Joannegton/psy_terapeuta_virtual/blob/main/termosDeUso.md');
+                                  },
                               ),
                               const TextSpan(text: ' e '),
                               TextSpan(
                                 text: 'Política de Privacidade',
                                 style: TextStyle(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                                    color: Theme.of(context).colorScheme.primary,
+                                    fontWeight: FontWeight.w600,
+                                    decoration: TextDecoration.underline,
+                                    decorationColor:
+                                        Theme.of(context).colorScheme.primary),
+                                recognizer: TapGestureRecognizer()
+                                  ..onTap = () {
+                                    _launchURL(
+                                        'https://github.com/Joannegton/psy_terapeuta_virtual/blob/main/politicasDePrivacidade.md');
+                                  },
                               ),
                             ],
                           ),
@@ -277,7 +330,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       return SizedBox(
                         height: 56,
                         child: ElevatedButton(
-                          onPressed: authProvider.isLoading ? null : _handleRegister,
+                          onPressed: (authProvider.isLoading || !_isButtonEnabled)
+                              ? null
+                              : _handleRegister,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Theme.of(context).colorScheme.primary,
                             foregroundColor: Colors.white,

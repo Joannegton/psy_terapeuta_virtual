@@ -133,6 +133,41 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  /// Atualiza o nome de exibição do usuário no Firebase Auth e no Firestore.
+  Future<void> updateUserName(String newName) async {
+    if (_user == null) {
+      _error = "Usuário não autenticado.";
+      notifyListeners();
+      throw Exception(_error);
+    }
+
+    final trimmedName = newName.trim();
+    if (trimmedName.isEmpty) {
+      _error = "O nome não pode ser vazio.";
+      notifyListeners();
+      throw Exception(_error);
+    }
+
+    _setLoading(true);
+    _error = null;
+
+    try {
+      // 1. Atualiza o nome no Firebase Authentication
+      await _user!.updateDisplayName(trimmedName);
+
+      // 2. Atualiza o nome no documento do usuário no Firestore
+      await AuthService.updateUserData(_user!.uid, {'displayName': trimmedName});
+
+      // 3. Atualiza o modelo de usuário local
+      _userModel = await AuthService.getUserData(_user!.uid);
+    } catch (e) {
+      _error = "Erro ao atualizar o nome: ${e.toString()}";
+      rethrow;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   void _setLoading(bool loading) {
     _isLoading = loading;
     notifyListeners();

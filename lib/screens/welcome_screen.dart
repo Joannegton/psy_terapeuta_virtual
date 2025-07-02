@@ -15,7 +15,7 @@ class WelcomeScreen extends StatelessWidget {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Theme.of(context).colorScheme.primary.withOpacity(0.1),
+              Theme.of(context).colorScheme.primary.withAlpha(25),
               Theme.of(context).colorScheme.surface,
             ],
           ),
@@ -28,7 +28,6 @@ class WelcomeScreen extends StatelessWidget {
               children: [
                 const Spacer(),
                 
-                // Logo/Ícone
                 Container(
                   width: 120,
                   height: 120,
@@ -37,17 +36,16 @@ class WelcomeScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(30),
                     boxShadow: [
                       BoxShadow(
-                        color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                        color: Theme.of(context).colorScheme.primary.withAlpha(76),
                         blurRadius: 20,
                         offset: const Offset(0, 10),
                       ),
                     ],
                   ),
-                  child: const Icon(
-                    Icons.psychology_rounded,
-                    size: 60,
-                    color: Colors.white,
-                  ),
+                  child: Image.asset(
+                    'assets/images/psy_png.png',
+                    fit: BoxFit.contain,
+                  )
                 ).animate().scale(
                   duration: 800.ms,
                   curve: Curves.elasticOut,
@@ -55,7 +53,6 @@ class WelcomeScreen extends StatelessWidget {
                 
                 const SizedBox(height: 32),
                 
-                // Título
                 Text(
                   'Psy',
                   style: Theme.of(context).textTheme.displayLarge?.copyWith(
@@ -66,25 +63,23 @@ class WelcomeScreen extends StatelessWidget {
                 
                 const SizedBox(height: 8),
                 
-                // Subtítulo
                 Text(
                   'Seu Terapeuta Virtual',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                    color: Theme.of(context).colorScheme.onSurface.withAlpha(178),
                     fontWeight: FontWeight.w500,
                   ),
                 ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.3),
                 
                 const SizedBox(height: 24),
                 
-                // Descrição
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Text(
                     'Um espaço seguro para conversar sobre seus sentimentos e emoções. Estou aqui para ouvir e apoiar você.',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                      color: Theme.of(context).colorScheme.onSurface.withAlpha(153),
                       height: 1.5,
                     ),
                   ),
@@ -92,10 +87,8 @@ class WelcomeScreen extends StatelessWidget {
                 
                 const Spacer(),
                 
-                // Botões de ação
                 Column(
                   children: [
-                    // Botão de cadastro
                     SizedBox(
                       width: double.infinity,
                       height: 56,
@@ -110,7 +103,7 @@ class WelcomeScreen extends StatelessWidget {
                           backgroundColor: Theme.of(context).colorScheme.primary,
                           foregroundColor: Colors.white,
                           elevation: 8,
-                          shadowColor: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                          shadowColor: Theme.of(context).colorScheme.primary.withAlpha(76),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
@@ -134,7 +127,6 @@ class WelcomeScreen extends StatelessWidget {
                     
                     const SizedBox(height: 16),
                     
-                    // Botão de login
                     SizedBox(
                       width: double.infinity,
                       height: 56,
@@ -176,11 +168,10 @@ class WelcomeScreen extends StatelessWidget {
                 
                 const SizedBox(height: 32),
                 
-                // Nota sobre privacidade
                 Text(
                   '🔒 Suas conversas são privadas e seguras',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                    color: Theme.of(context).colorScheme.onSurface.withAlpha(150),
                   ),
                 ).animate().fadeIn(delay: 1000.ms),
               ],
