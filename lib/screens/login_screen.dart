@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:psy_therapist/main.dart';
+import 'package:psy_therapist/screens/chat_screen.dart';
 import 'package:psy_therapist/screens/forgot_password.dart';
 import 'package:psy_therapist/widgets/custom_textfield.dart';
 import '../providers/auth_provider.dart';
@@ -37,7 +38,12 @@ class _LoginScreenState extends State<LoginScreen> {
       password: _passwordController.text,
     );
 
-    if (!success && mounted) {
+    if (success && mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const ChatScreen()),
+        (route) => false,
+      );
+    } else if (!success && mounted) {
       context.showSnackBar(
         authProvider.error ?? 'Erro ao fazer login',
         isError: true,
