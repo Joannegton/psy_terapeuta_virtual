@@ -297,7 +297,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 recognizer: TapGestureRecognizer()
                                   ..onTap = () {
                                     _launchURL(
-                                        'https://github.com/Joannegton/psy_terapeuta_virtual/blob/main/termosDeUso.md');
+                                        'https://raw.githubusercontent.com/Joannegton/psy_terapeuta_virtual/refs/heads/gemini-api/termosDeUso.md');
                                   },
                               ),
                               const TextSpan(text: ' e '),
@@ -312,7 +312,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 recognizer: TapGestureRecognizer()
                                   ..onTap = () {
                                     _launchURL(
-                                        'https://github.com/Joannegton/psy_terapeuta_virtual/blob/main/politicasDePrivacidade.md');
+                                        'https://raw.githubusercontent.com/Joannegton/psy_terapeuta_virtual/refs/heads/gemini-api/politicasDePrivacidade.md');
                                   },
                               ),
                             ],
