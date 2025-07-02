@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:psy_therapist/widgets/Perfil_dialog.dart';
 import '../providers/chat_provider.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/chat_input.dart';
 import '../providers/auth_provider.dart';
-import '../main.dart'; // Import para usar a extensão showSnackBar
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -22,18 +22,6 @@ class _ChatScreenState extends State<ChatScreen> {
   void dispose() {
     _scrollController.dispose();
     super.dispose();
-  }
-
-  void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
-    });
   }
 
   @override
@@ -60,7 +48,7 @@ class _ChatScreenState extends State<ChatScreen> {
               child: Image.asset(
                 'assets/images/psy_png.png',
                 fit: BoxFit.contain,
-              ),
+              )
             ),
             const SizedBox(width: 12),
             Column(
@@ -69,14 +57,14 @@ class _ChatScreenState extends State<ChatScreen> {
                 Text(
                   'Psy',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 Text(
                   'Terapeuta Virtual',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withAlpha(153),
-                      ),
+                    color: Theme.of(context).colorScheme.onSurface.withAlpha(153),
+                  ),
                 ),
               ],
             ),
@@ -171,12 +159,12 @@ class _ChatScreenState extends State<ChatScreen> {
                             message: message,
                             isLast: index == chatProvider.messages.length - 1,
                           ).animate().fadeIn(
-                                delay: Duration(milliseconds: index * 100),
-                              ).slideX(
-                                  begin: message.type.name == 'user' ? 0.3 : -0.3);
+                            delay: Duration(milliseconds: index * 100),
+                          ).slideX(begin: message.type.name == 'user' ? 0.3 : -0.3);
                         },
                       ),
               ),
+              
               if (!chatProvider.isConversationEnded)
                 ChatInput(
                   onSendMessage: chatProvider.sendMessage,
@@ -190,11 +178,8 @@ class _ChatScreenState extends State<ChatScreen> {
                       Text(
                         'Conversa encerrada',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withAlpha(153),
-                            ),
+                          color: Theme.of(context).colorScheme.onSurface.withAlpha(153),
+                        ),
                       ),
                       const SizedBox(height: 8),
                       ElevatedButton(
@@ -216,8 +201,7 @@ class _ChatScreenState extends State<ChatScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Nova Conversa'),
-        content:
-            const Text('Deseja iniciar uma nova conversa? O histórico atual será perdido.'),
+        content: const Text('Deseja iniciar uma nova conversa? O histórico atual será perdido.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -264,7 +248,7 @@ class _ChatScreenState extends State<ChatScreen> {
   void _showProfileDialog(BuildContext context, AuthProvider authProvider) {
     showDialog(
       context: context,
-      builder: (dialogContext) => _ProfileDialog(authProvider: authProvider),
+      builder: (context) => ProfileDialog(authProvider: authProvider),
     );
   }
 
@@ -293,162 +277,17 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
     );
   }
-}
 
-class _ProfileDialog extends StatefulWidget {
-  final AuthProvider authProvider;
-
-  const _ProfileDialog({required this.authProvider});
-
-  @override
-  State<_ProfileDialog> createState() => _ProfileDialogState();
-}
-
-class _ProfileDialogState extends State<_ProfileDialog> {
-  final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _nameController;
-  bool _isEditing = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _nameController = TextEditingController(
-      text: widget.authProvider.user?.displayName ?? '',
-    );
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _handleUpdateName(BuildContext dialogContext) async {
-    if (!_formKey.currentState!.validate()) return;
-
-    final authProvider = context.read<AuthProvider>();
-
-    try {
-      await authProvider.updateUserName(_nameController.text);
-      if (mounted) {
-        // Update the controller to reflect the new name
-        setState(() {
-          _isEditing = false;
-        });
-        // Show snackbar in the dialog context
-        ScaffoldMessenger.of(dialogContext).showSnackBar(
-          SnackBar(
-            content: Text('Nome atualizado com sucesso!'),
-            backgroundColor: Theme.of(dialogContext).colorScheme.primary,
-            duration: Duration(seconds: 2),
-          ),
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
         );
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(dialogContext).showSnackBar(
-          SnackBar(
-            content: Text(authProvider.error ?? 'Erro ao atualizar o nome.'),
-            backgroundColor: Theme.of(dialogContext).colorScheme.error,
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-    }
+    });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Consumer<AuthProvider>(
-      builder: (context, authProvider, child) {
-        final user = authProvider.user;
-        final creationDate = user?.metadata.creationTime;
-
-        // Formata a data de criação da conta
-        String memberSince = 'Data não disponível';
-        if (creationDate != null) {
-          memberSince = '${authProvider.userModel?.createdAt.day}/${authProvider.userModel?.createdAt.month}/${authProvider.userModel?.createdAt.year}';
-        }
-
-        // Update controller text if the user name changes
-        if (!_isEditing && _nameController.text != (user?.displayName ?? '')) {
-          _nameController.text = user?.displayName ?? '';
-        }
-
-        return AlertDialog(
-          title: const Text('Perfil'),
-          content: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Nome:', style: TextStyle(fontWeight: FontWeight.bold)),
-                if (_isEditing)
-                  TextFormField(
-                    controller: _nameController,
-                    autofocus: true,
-                    decoration: const InputDecoration(hintText: 'Digite seu nome'),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'O nome não pode ser vazio.';
-                      }
-                      return null;
-                    },
-                  )
-                else
-                  Row(
-                    children: [
-                      Expanded(child: Text(user?.displayName ?? 'Não informado')),
-                      IconButton(
-                        icon: const Icon(Icons.edit_outlined, size: 20),
-                        onPressed: () => setState(() => _isEditing = true),
-                        tooltip: 'Editar nome',
-                      ),
-                    ],
-                  ),
-                const SizedBox(height: 16),
-                const Text('Email:', style: TextStyle(fontWeight: FontWeight.bold)),
-                Text(user?.email ?? 'Email não disponível'),
-                const SizedBox(height: 16),
-                const Text('Membro desde:', style: TextStyle(fontWeight: FontWeight.bold)),
-                Text(memberSince),
-              ],
-            ),
-          ),
-          actions: _isEditing
-              ? _buildEditingActions(context, authProvider.isLoading)
-              : [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Fechar'),
-                  )
-                ],
-        );
-      },
-    );
-  }
-
-  List<Widget> _buildEditingActions(BuildContext context, bool isLoading) {
-    return [
-      TextButton(
-        onPressed: isLoading
-            ? null
-            : () {
-                setState(() => _isEditing = false);
-                _nameController.text = widget.authProvider.user?.displayName ?? '';
-              },
-        child: const Text('Cancelar'),
-      ),
-      ElevatedButton(
-        onPressed: isLoading ? null : () => _handleUpdateName(context),
-        child: isLoading
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-            : const Text('Salvar'),
-      ),
-    ];
-  }
 }

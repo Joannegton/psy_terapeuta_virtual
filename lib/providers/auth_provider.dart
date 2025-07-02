@@ -7,6 +7,7 @@ class AuthProvider extends ChangeNotifier {
   User? _user;
   UserModel? _userModel;
   bool _isLoading = false;
+  bool _isProfileLoading = false; // Novo loading exclusivo para perfil
   String? _error;
 
   User? get user => _user;
@@ -14,6 +15,7 @@ class AuthProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get isAuthenticated => _user != null;
+  bool get isProfileLoading => _isProfileLoading;
 
   AuthProvider() {
     // Escutar mudanças no estado de autenticação
@@ -148,23 +150,26 @@ class AuthProvider extends ChangeNotifier {
       throw Exception(_error);
     }
 
-    _setLoading(true);
+    _isProfileLoading = true;
+    notifyListeners();
     _error = null;
 
+    //TODO mover para o AuthService
     try {
-      // 1. Atualiza o nome no Firebase Authentication
       await _user!.updateDisplayName(trimmedName);
 
-      // 2. Atualiza o nome no documento do usuário no Firestore
       await AuthService.updateUserData(_user!.uid, {'displayName': trimmedName});
 
-      // 3. Atualiza o modelo de usuário local
+      await _user!.reload();
+      _user = FirebaseAuth.instance.currentUser;
+
       _userModel = await AuthService.getUserData(_user!.uid);
     } catch (e) {
       _error = "Erro ao atualizar o nome: ${e.toString()}";
       rethrow;
     } finally {
-      _setLoading(false);
+      _isProfileLoading = false;
+      notifyListeners();
     }
   }
 
