@@ -8,6 +8,7 @@ class ChatProvider extends ChangeNotifier {
   final List<Message> _messages = [];
   bool _isLoading = false;
   bool _isConversationEnded = false;
+  final Uuid _uuid = const Uuid();
   String? _userId;
 
   List<Message> get messages => List.unmodifiable(_messages);
@@ -43,7 +44,7 @@ class ChatProvider extends ChangeNotifier {
 
   void _addWelcomeMessage() {
     final welcomeMsg = Message(
-      id: const Uuid().v4(),
+      id: _uuid.v4(),
       content: _welcomeMessage,
       type: MessageType.ai,
       timestamp: DateTime.now(),
@@ -58,7 +59,7 @@ class ChatProvider extends ChangeNotifier {
 
     // Adicionar mensagem do usuário
     final userMessage = Message(
-      id: const Uuid().v4(),
+      id: _uuid.v4(),
       content: content.trim(),
       type: MessageType.user,
       timestamp: DateTime.now(),
@@ -67,7 +68,7 @@ class ChatProvider extends ChangeNotifier {
 
     // Adicionar mensagem de loading da IA
     final loadingMessage = Message(
-      id: const Uuid().v4(),
+      id: _uuid.v4(),
       content: '',
       type: MessageType.ai,
       timestamp: DateTime.now(),
@@ -87,7 +88,7 @@ class ChatProvider extends ChangeNotifier {
       
       // Adicionar resposta da IA
       final aiMessage = Message(
-        id: const Uuid().v4(),
+        id: _uuid.v4(),
         content: response,
         type: MessageType.ai,
         timestamp: DateTime.now(),
@@ -112,7 +113,7 @@ class ChatProvider extends ChangeNotifier {
       _messages.removeLast();
       
       final errorMessage = Message(
-        id: const Uuid().v4(),
+        id: _uuid.v4(),
         content: 'Desculpe, tive um problema técnico. Vamos tentar novamente? 🤗',
         type: MessageType.ai,
         timestamp: DateTime.now(),

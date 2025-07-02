@@ -1,0 +1,25 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "psy-terapeuta-virtual-74c73",
+          "appId": "1:92754525573:android:4dfce5ca788d4115c818ec",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "psy-terapeuta-virtual-74c73",
+          "configurations": {
+            "android": "1:92754525573:android:4dfce5ca788d4115c818ec",
+            "ios": "1:92754525573:ios:fc22d00442239c42c818ec",
+            "macos": "1:92754525573:ios:fc22d00442239c42c818ec",
+            "web": "1:92754525573:web:fe2a7543098f6216c818ec",
+            "windows": "1:92754525573:web:64da50b7581f8e66c818ec"
+          }
+        }
+      }
+    }
+  }
+}

@@ -2,16 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'providers/chat_provider.dart';
 import 'providers/auth_provider.dart';
 import 'screens/auth_wrapper.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Inicializar Firebase
-  await Firebase.initializeApp();
-  
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   runApp(const PsyApp());
 }
 
@@ -55,12 +57,14 @@ class PsyApp extends StatelessWidget {
 
 extension ContextExtension on BuildContext {
   void showSnackBar(String message, {bool isError = false}) {
+    final theme = Theme.of(this);
     ScaffoldMessenger.of(this).showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: isError
-            ? Theme.of(this).colorScheme.error
-            : Theme.of(this).snackBarTheme.backgroundColor,
+            ? theme.colorScheme.error
+            : theme.snackBarTheme.backgroundColor ??
+                theme.colorScheme.inverseSurface,
       ),
     );
   }
