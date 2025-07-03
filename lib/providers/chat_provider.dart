@@ -1,22 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import '../models/message.dart';
 import '../services/firestore_service.dart';
-import '../services/gemini_service.dart';
 
 class ChatProvider extends ChangeNotifier {
   final List<Message> _messages = [];
   bool _isLoading = false;
-  bool _isConversationEnded = false;
   final Uuid _uuid = const Uuid();
   String? _userId;
   FirestoreService? _firestoreService;
 
   List<Message> get messages => List.unmodifiable(_messages);
   bool get isLoading => _isLoading;
-  bool get isConversationEnded => _isConversationEnded;
   
-  final GeminiService _geminiService = GeminiService();
+  // Instância do Firebase Functions (verifique a região no seu console do Firebase)
+  final FirebaseFunctions _functions = FirebaseFunctions.instanceFor(region: 'us-central1');
 
   static const String _welcomeMessage = 
     "Olá, eu sou o Psy! 👋\n\nEstou aqui para conversar com você sobre como está se sentindo. Este é um espaço seguro onde podemos falar sobre suas emoções, pensamentos e qualquer coisa que esteja em sua mente.\n\nComo está se sentindo hoje?";
@@ -28,7 +27,10 @@ class ChatProvider extends ChangeNotifier {
     await _loadMessages();
     
     if (_messages.isEmpty) {
-      _addWelcomeMessage();
+      final welcomeMsg = _createWelcomeMessage();
+      _messages.add(welcomeMsg);
+      // Salva a mensagem de boas-vindas se o histórico estiver vazio
+      await _firestoreService?.addMessage(welcomeMsg);
     }
     
     notifyListeners();
@@ -46,20 +48,18 @@ class ChatProvider extends ChangeNotifier {
     }
   }
 
-  void _addWelcomeMessage() {
-    final welcomeMsg = Message(
+  Message _createWelcomeMessage() {
+    return Message(
       id: _uuid.v4(),
       content: _welcomeMessage,
       type: MessageType.ai,
       timestamp: DateTime.now(),
     );
-    _messages.add(welcomeMsg);
   }
 
   Future<void> sendMessage(String content) async {
-    if (content.trim().isEmpty || _isLoading || _isConversationEnded || _userId == null) return;
+    if (content.trim().isEmpty || _isLoading || _userId == null) return;
 
-    final isGoodbye = _isGoodbyeMessage(content);
 
     // Adicionar mensagem do usuário
     final userMessage = Message(
@@ -85,10 +85,21 @@ class ChatProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Envia o histórico para o Gemini, mas sem a mensagem de "loading"
-      final historyForApi =
-          _messages.where((msg) => !msg.isLoading).toList();
-      final response = await _geminiService.sendMessage(historyForApi);
+      // Converte o histórico de mensagens para o formato que a Cloud Function espera
+      final historyForFunction = _messages
+          .where((msg) => !msg.isLoading)
+          .map((msg) => {
+                'role': msg.type == MessageType.user ? 'user' : 'model',
+                'parts': [{'text': msg.content}]
+              })
+          .toList();
+
+      // Chama a nossa Cloud Function segura
+      final callable = _functions.httpsCallable('generateWithGemini');
+      final result = await callable.call<Map<String, dynamic>>({
+        'contents': historyForFunction,
+      });
+      final response = result.data['text'] as String? ?? 'Desculpe, não consegui processar a resposta.';
       
       // Remover mensagem de loading
       _messages.removeLast();
@@ -103,56 +114,53 @@ class ChatProvider extends ChangeNotifier {
       _messages.add(aiMessage);
       _firestoreService?.addMessage(aiMessage); // Salva a resposta da IA
 
-      if (isGoodbye) {
-        _isConversationEnded = true;
-      }
-
       // Salvar analytics
       await FirestoreService.saveUsageAnalytics(_userId!, {
         'action': 'message_sent',
         'message_count': _messages.length,
-        'conversation_ended': _isConversationEnded,
       });
       
+    } on FirebaseFunctionsException catch (e) {
+      print('Erro na Cloud Function: ${e.code} - ${e.message}');
+      _messages.removeLast(); // Remove o loading
+      _addErrorMessage();
     } catch (e) {
-      _messages.removeLast();
-      
-      final errorMessage = Message(
-        id: _uuid.v4(),
-        content: 'Desculpe, tive um problema técnico. Vamos tentar novamente? 🤗',
-        type: MessageType.ai,
-        timestamp: DateTime.now(),
-      );
-      _messages.add(errorMessage);
+      print('Erro inesperado ao enviar mensagem: $e');
+      _messages.removeLast(); // Remove o loading
+      _addErrorMessage();
     }
 
     _isLoading = false;
     notifyListeners();
   }
 
-  bool _isGoodbyeMessage(String message) {
-    final goodbyeWords = ['tchau', 'bye', 'adeus', 'até logo', 'até mais', 'obrigado', 'obrigada'];
-    final lowerMessage = message.toLowerCase();
-    return goodbyeWords.any((word) => lowerMessage.contains(word));
+  void _addErrorMessage() {
+    final errorMessage = Message(
+      id: _uuid.v4(),
+      content: 'Desculpe, tive um problema técnico. Vamos tentar novamente? 🤗',
+      type: MessageType.ai,
+      timestamp: DateTime.now(),
+    );
+    _messages.add(errorMessage);
   }
 
   Future<void> startNewConversation() async {
     if (_firestoreService == null) return;
     
     _messages.clear();
-    _isConversationEnded = false;
     await _firestoreService!.clearMessages();
-    _addWelcomeMessage();
+    final welcomeMsg = _createWelcomeMessage();
+    _messages.add(welcomeMsg);
     // Salva a nova mensagem de boas-vindas no Firestore
-    await _firestoreService!.addMessage(_messages.first);
+    await _firestoreService!.addMessage(welcomeMsg);
     notifyListeners();
   }
 
   Future<void> clearChat() async {
     if (_firestoreService == null) return;
-    
+
+    _isLoading = false;
     _messages.clear();
-    _isConversationEnded = false;
     await _firestoreService!.clearMessages();
     notifyListeners();
   }

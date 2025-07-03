@@ -4,6 +4,7 @@ import '../models/user.dart';
 import '../services/auth_service.dart';
 
 class AuthProvider extends ChangeNotifier {
+  final AuthService _authService;
   User? _user;
   UserModel? _userModel;
   bool _isLoading = false;
@@ -17,28 +18,30 @@ class AuthProvider extends ChangeNotifier {
   bool get isAuthenticated => _user != null;
   bool get isProfileLoading => _isProfileLoading;
 
-  AuthProvider() {
+  AuthProvider(this._authService) {
     // Escutar mudanças no estado de autenticação
-    AuthService.authStateChanges.listen(_onAuthStateChanged);
+    _authService.authStateChanges.listen(_onAuthStateChanged);
   }
 
   Future<void> _onAuthStateChanged(User? user) async {
-    _user = user;
-    _error = null;
+  _user = user;
+  _error = null;
+  _isLoading = true; // Indicar carregamento enquanto busca dados
 
-    if (user != null) {
-      try {
-        _userModel = await AuthService.getUserData(user.uid);
-      } catch (e) {
-        _error = e.toString();
-      }
-    } else {
+  if (user != null) {
+    try {
+      _userModel = await _authService.getUserData(user.uid);
+    } catch (e) {
+      _error = 'Erro ao carregar dados do usuário: $e';
       _userModel = null;
     }
-
-    notifyListeners();
+  } else {
+    _userModel = null;
   }
 
+  _isLoading = false;
+  notifyListeners();
+}
   // Registrar novo usuário
   Future<bool> register({
     required String email,
@@ -49,7 +52,7 @@ class AuthProvider extends ChangeNotifier {
       _setLoading(true);
       _error = null;
 
-      await AuthService.registerWithEmailAndPassword(
+      await _authService.registerWithEmailAndPassword(
         email: email,
         password: password,
         displayName: displayName,
@@ -66,32 +69,39 @@ class AuthProvider extends ChangeNotifier {
 
   // Login
   Future<bool> signIn({
-    required String email,
-    required String password,
-  }) async {
-    try {
-      _setLoading(true);
-      _error = null;
+  required String email,
+  required String password,
+}) async {
+  try {
+    _setLoading(true);
+    _error = null;
 
-      await AuthService.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+    print('Tentando login com email: $email'); // Log para depuração
 
-      return true;
-    } catch (e) {
-      _error = e.toString();
-      return false;
-    } finally {
-      _setLoading(false);
-    }
+    await _authService.signInWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+
+    return true;
+  } on FirebaseAuthException catch (e) {
+    _error = _authService.handleAuthException(e);
+    print('Erro de autenticação: $_error'); // Log para depuração
+    return false;
+  } catch (e) {
+    _error = 'Erro inesperado ao fazer login: $e';
+    print('Erro inesperado: $_error'); // Log para depuração
+    return false;
+  } finally {
+    _setLoading(false);
   }
+}
 
   // Logout
   Future<void> signOut() async {
     try {
       _setLoading(true);
-      await AuthService.signOut();
+      await _authService.signOut();
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -105,7 +115,7 @@ class AuthProvider extends ChangeNotifier {
       _setLoading(true);
       _error = null;
 
-      await AuthService.resetPassword(email);
+      await _authService.resetPassword(email);
       return true;
     } catch (e) {
       _error = e.toString();
@@ -123,8 +133,8 @@ class AuthProvider extends ChangeNotifier {
       _setLoading(true);
       _error = null;
 
-      await AuthService.updateUserData(_user!.uid, data);
-      _userModel = await AuthService.getUserData(_user!.uid);
+      await _authService.updateUserData(_user!.uid, data);
+      _userModel = await _authService.getUserData(_user!.uid);
       
       return true;
     } catch (e) {
@@ -158,12 +168,12 @@ class AuthProvider extends ChangeNotifier {
     try {
       await _user!.updateDisplayName(trimmedName);
 
-      await AuthService.updateUserData(_user!.uid, {'displayName': trimmedName});
+      await _authService.updateUserData(_user!.uid, {'displayName': trimmedName});
 
       await _user!.reload();
-      _user = FirebaseAuth.instance.currentUser;
+      _user = _authService.currentUser;
 
-      _userModel = await AuthService.getUserData(_user!.uid);
+      _userModel = await _authService.getUserData(_user!.uid);
     } catch (e) {
       _error = "Erro ao atualizar o nome: ${e.toString()}";
       rethrow;

@@ -29,28 +29,40 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
-    if (!_formKey.currentState!.validate()) return;
+  if (!_formKey.currentState!.validate()) return;
 
-    final authProvider = context.read<AuthProvider>();
-    
+  final authProvider = context.read<AuthProvider>();
+
+  try {
+    print('Iniciando login com email: ${_emailController.text.trim()}');
     final success = await authProvider.signIn(
       email: _emailController.text.trim(),
       password: _passwordController.text,
     );
 
     if (success && mounted) {
+      print('Login bem-sucedido, navegando para ChatScreen');
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const ChatScreen()),
         (route) => false,
       );
     } else if (!success && mounted) {
+      print('Erro no login: ${authProvider.error}');
       context.showSnackBar(
-        authProvider.error ?? 'Erro ao fazer login',
+        authProvider.error ?? 'Erro ao fazer login. Tente novamente.',
+        isError: true,
+      );
+    }
+  } catch (e) {
+    print('Exceção inesperada no login: $e');
+    if (mounted) {
+      context.showSnackBar(
+        'Erro inesperado: $e',
         isError: true,
       );
     }
   }
-
+}
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -92,10 +104,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ],
                         ),
-                        child: const Icon(
-                          Icons.psychology_rounded,
-                          size: 40,
-                          color: Colors.white,
+                        child: Image.asset(
+                          'assets/images/psy_png.png',
+                          fit: BoxFit.contain,
                         ),
                       ).animate().scale(
                         duration: 600.ms,

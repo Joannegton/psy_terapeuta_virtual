@@ -27,6 +27,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         systemOverlayStyle: SystemUiOverlayStyle(
           statusBarBrightness: Theme.of(context).brightness == Brightness.light
@@ -82,7 +83,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       } else if (value == 'clear_chat') {
                         _showClearChatDialog(context, chatProvider);
                       } else if (value == 'profile') {
-                        _showProfileDialog(context, authProvider);
+                        _showProfileDialog(context);
                       } else if (value == 'logout') {
                         _showLogoutDialog(context, authProvider);
                       }
@@ -136,62 +137,85 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
         ],
       ),
-      body: Consumer<ChatProvider>(
-        builder: (context, chatProvider, _) {
-          if (chatProvider.messages.isNotEmpty) {
-            _scrollToBottom();
-          }
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Theme.of(context).colorScheme.primary.withAlpha(25),
+              Theme.of(context).colorScheme.surface,
+            ],
+          ),
+        ),
+        child: Consumer<ChatProvider>(
+          builder: (context, chatProvider, _) {
+            if (chatProvider.messages.isNotEmpty) {
+              _scrollToBottom();
+            }
 
-          return Column(
-            children: [
-              Expanded(
-                child: chatProvider.messages.isEmpty
-                    ? const Center(
-                        child: CircularProgressIndicator(),
-                      )
-                    : ListView.builder(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.all(16),
-                        itemCount: chatProvider.messages.length,
-                        itemBuilder: (context, index) {
-                          final message = chatProvider.messages[index];
-                          return MessageBubble(
-                            message: message,
-                            isLast: index == chatProvider.messages.length - 1,
-                          ).animate().fadeIn(
-                            delay: Duration(milliseconds: index * 100),
-                          ).slideX(begin: message.type.name == 'user' ? 0.3 : -0.3);
-                        },
-                      ),
-              ),
-              
-              if (!chatProvider.isConversationEnded)
+            return Column(
+              children: [
+                Expanded(
+                  child: chatProvider.messages.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.chat_bubble_outline,
+                                  size: 64,
+                                  color: Theme.of(context).colorScheme.primary.withAlpha(52)),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Nenhuma mensagem ainda',
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurface.withAlpha(128),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Envie uma mensagem para começar a conversa!',
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurface.withAlpha(80),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : NotificationListener<SizeChangedLayoutNotification>(
+                          onNotification: (notification) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+                            return false;
+                          },
+                          child: SizeChangedLayoutNotifier(
+                            child: ListView.builder(
+                              controller: _scrollController,
+                              padding: const EdgeInsets.all(16),
+                              itemCount: chatProvider.messages.length,
+                              itemBuilder: (context, index) {
+                                final message = chatProvider.messages[index];
+                                return MessageBubble(
+                                  message: message,
+                                  isLast: index == chatProvider.messages.length - 1,
+                                ).animate().fadeIn(
+                                  delay: Duration(milliseconds: index * 100),
+                                ).slideX(begin: message.type.name == 'user' ? 0.3 : -0.3);
+                              },
+                            ),
+                          ),
+                        ),
+                ),
+
                 ChatInput(
                   onSendMessage: chatProvider.sendMessage,
                   isLoading: chatProvider.isLoading,
                 )
-              else
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      Text(
-                        'Conversa encerrada',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withAlpha(153),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      ElevatedButton(
-                        onPressed: () => chatProvider.startNewConversation(),
-                        child: const Text('Iniciar Nova Conversa'),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-          );
-        },
+            
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -245,10 +269,10 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  void _showProfileDialog(BuildContext context, AuthProvider authProvider) {
+  void _showProfileDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => ProfileDialog(authProvider: authProvider),
+      builder: (context) => const ProfileDialog(),
     );
   }
 

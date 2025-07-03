@@ -3,17 +3,17 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user.dart';
 
 class AuthService {
-  static final FirebaseAuth _auth = FirebaseAuth.instance;
-  static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // Stream do usuário atual
-  static Stream<User?> get authStateChanges => _auth.authStateChanges();
+  Stream<User?> get authStateChanges => _auth.authStateChanges();
 
   // Usuário atual
-  static User? get currentUser => _auth.currentUser;
+  User? get currentUser => _auth.currentUser;
 
   // Registrar novo usuário
-  static Future<UserCredential?> registerWithEmailAndPassword({
+  Future<UserCredential> registerWithEmailAndPassword({
     required String email,
     required String password,
     String? displayName,
@@ -23,27 +23,25 @@ class AuthService {
         email: email,
         password: password,
       );
+      // O usuário não será nulo em caso de sucesso.
+      final user = credential.user!;
 
-      if (credential.user != null) {
-        // Atualizar display name se fornecido
-        if (displayName != null && displayName.isNotEmpty) {
-          await credential.user!.updateDisplayName(displayName);
-        }
-
-        // Criar documento do usuário no Firestore
-        await _createUserDocument(credential.user!);
+      // Atualizar display name se fornecido
+      if (displayName != null && displayName.isNotEmpty) {
+        await user.updateDisplayName(displayName);
       }
 
+      // Criar documento do usuário no Firestore
+      await _createUserDocument(user);
+
       return credential;
-    } on FirebaseAuthException catch (e) {
-      throw _handleAuthException(e);
-    } catch (e) {
-      throw Exception('Erro inesperado durante o cadastro: $e');
+    } catch (_) {
+      rethrow;
     }
   }
 
   // Login com email e senha
-  static Future<UserCredential?> signInWithEmailAndPassword({
+  Future<UserCredential> signInWithEmailAndPassword({
     required String email,
     required String password,
   }) async {
@@ -52,42 +50,41 @@ class AuthService {
         email: email,
         password: password,
       );
-
-      if (credential.user != null) {
-        // Atualizar último login
-        await _updateLastLogin(credential.user!.uid);
-      }
+      // O usuário não será nulo em caso de sucesso.
+      // Atualizar último login
+      await _updateLastLogin(credential.user!.uid);
 
       return credential;
     } on FirebaseAuthException catch (e) {
-      throw _handleAuthException(e);
+      // Relança para ser tratado na camada superior (AuthProvider)
+      throw e;
     } catch (e) {
-      throw Exception('Erro inesperado durante o login: $e');
+      // Relança outros erros inesperados
+      rethrow;
     }
   }
 
   // Logout
-  static Future<void> signOut() async {
+  Future<void> signOut() async {
     try {
       await _auth.signOut();
     } catch (e) {
-      throw Exception('Erro ao fazer logout: $e');
+      // É uma boa prática logar este erro.
+      rethrow;
     }
   }
 
   // Reset de senha
-  static Future<void> resetPassword(String email) async {
+  Future<void> resetPassword(String email) async {
     try {
       await _auth.sendPasswordResetEmail(email: email);
-    } on FirebaseAuthException catch (e) {
-      throw _handleAuthException(e);
-    } catch (e) {
-      throw Exception('Erro ao enviar email de recuperação: $e');
+    } catch (_) {
+      rethrow;
     }
   }
 
   // Obter dados do usuário do Firestore
-  static Future<UserModel?> getUserData(String uid) async {
+  Future<UserModel?> getUserData(String uid) async {
     try {
       final doc = await _firestore.collection('users').doc(uid).get();
       if (doc.exists) {
@@ -95,21 +92,23 @@ class AuthService {
       }
       return null;
     } catch (e) {
-      throw Exception('Erro ao buscar dados do usuário: $e');
+      // É uma boa prática logar este erro.
+      rethrow;
     }
   }
 
   // Atualizar dados do usuário
-  static Future<void> updateUserData(String uid, Map<String, dynamic> data) async {
+  Future<void> updateUserData(String uid, Map<String, dynamic> data) async {
     try {
       await _firestore.collection('users').doc(uid).update(data);
     } catch (e) {
-      throw Exception('Erro ao atualizar dados do usuário: $e');
+      // É uma boa prática logar este erro.
+      rethrow;
     }
   }
 
   // Criar documento do usuário no Firestore
-  static Future<void> _createUserDocument(User user) async {
+  Future<void> _createUserDocument(User user) async {
     final userModel = UserModel(
       uid: user.uid,
       email: user.email!,
@@ -128,14 +127,17 @@ class AuthService {
   }
 
   // Atualizar último login
-  static Future<void> _updateLastLogin(String uid) async {
+  Future<void> _updateLastLogin(String uid) async {
     await _firestore.collection('users').doc(uid).update({
       'lastLoginAt': DateTime.now().toIso8601String(),
     });
   }
 
   // Tratar exceções do Firebase Auth
-  static String _handleAuthException(FirebaseAuthException e) {
+  /// Converte uma [FirebaseAuthException] em uma mensagem de erro legível para o usuário.
+  /// Este método pode ser movido para uma classe de utilitários ou para a camada de UI
+  /// para ser usado ao capturar as exceções relançadas pelos métodos do serviço.
+  String handleAuthException(FirebaseAuthException e) {
     switch (e.code) {
       case 'weak-password':
         return 'A senha é muito fraca. Use pelo menos 6 caracteres.';
@@ -144,9 +146,11 @@ class AuthService {
       case 'invalid-email':
         return 'O email fornecido é inválido.';
       case 'user-not-found':
-        return 'Nenhum usuário encontrado com este email.';
       case 'wrong-password':
-        return 'Senha incorreta.';
+      case 'invalid-credential':
+      // Por razões de segurança, o Firebase agora retorna 'invalid-credential'
+      // tanto para "usuário não encontrado" quanto para "senha incorreta".
+        return 'Credenciais inválidas. Verifique seu email e senha.';
       case 'user-disabled':
         return 'Esta conta foi desabilitada.';
       case 'too-many-requests':

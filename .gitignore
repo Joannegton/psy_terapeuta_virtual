@@ -2,6 +2,7 @@
 lib/firebase_options.dart
 **/google-services.json
 lib/apikey.dart
+key.properties
 
 # Miscellaneous
 *.class

@@ -1,3 +1,4 @@
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
@@ -6,6 +7,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'providers/chat_provider.dart';
 import 'providers/auth_provider.dart';
+import 'services/auth_service.dart';
 import 'screens/auth_wrapper.dart';
 
 void main() async {
@@ -13,6 +15,11 @@ void main() async {
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  await FirebaseAppCheck.instance.activate(
+    androidProvider: AndroidProvider.debug,
+    // appleProvider: AppleProvider.appAttest,
   );
 
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
@@ -31,7 +38,10 @@ class PsyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        Provider<AuthService>(create: (_) => AuthService()),
+        ChangeNotifierProvider(
+          create: (context) => AuthProvider(context.read<AuthService>()),
+        ),
         ChangeNotifierProvider(create: (_) => ChatProvider()),
       ],
       child: MaterialApp(

@@ -1,15 +1,14 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import 'package:psy_therapist/main.dart';
 import 'package:psy_therapist/providers/auth_provider.dart';
 
 /// Um widget com estado para o conteúdo do dialog de perfil,
 /// permitindo a edição do nome.
 class ProfileDialog extends StatefulWidget {
-  final AuthProvider authProvider;
-
-  const ProfileDialog({required this.authProvider});
+  const ProfileDialog({super.key});
 
   @override
   State<ProfileDialog> createState() => _ProfileDialogState();
@@ -23,7 +22,8 @@ class _ProfileDialogState extends State<ProfileDialog> {
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController();
+    final authProvider = context.read<AuthProvider>();
+    _nameController = TextEditingController(text: authProvider.user?.displayName ?? '');
   }
 
   @override
@@ -35,18 +35,17 @@ class _ProfileDialogState extends State<ProfileDialog> {
   Future<void> _handleUpdateName() async {
     if (!_formKey.currentState!.validate()) return;
 
+    // Pega o Navigator antes da chamada assíncrona para evitar usar o context
+    // de um widget que não está mais na árvore.
+    final navigator = Navigator.of(context);
     final authProvider = context.read<AuthProvider>();
 
     try {
       await authProvider.updateUserName(_nameController.text);
-      if (mounted) {
-        setState(() {
-          _isEditing = false;
-          _nameController.text = authProvider.user?.displayName ?? _nameController.text;
-        });
-        Navigator.of(context).pop();
-        context.showSnackBar('Nome atualizado com sucesso!');
-      }
+      // Fecha o dialog primeiro
+      navigator.pop();
+      // Depois mostra a notificação
+      context.showSnackBar('Nome atualizado com sucesso!');
     } catch (e) {
       if (mounted) {
         context.showSnackBar(authProvider.error ?? 'Erro ao atualizar o nome.', isError: true);
@@ -59,18 +58,12 @@ class _ProfileDialogState extends State<ProfileDialog> {
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
         final user = authProvider.user;
-        final creationDate = user?.metadata.creationTime;
-
-        if (!_isEditing) {
-          final currentName = authProvider.user?.displayName ?? '';
-          if (_nameController.text != currentName) {
-            _nameController.text = currentName;
-          }
-        }
+        final creationDate = authProvider.userModel?.createdAt;
 
         String memberSince = 'Data não disponível';
         if (creationDate != null) {
-          memberSince = '${authProvider.userModel?.createdAt.day}/${authProvider.userModel?.createdAt.month}/${authProvider.userModel?.createdAt.year}';
+          // Usar o pacote intl para formatação de data localizada e robusta.
+          memberSince = DateFormat.yMd('pt_BR').format(creationDate);
         }
 
         return AlertDialog(
@@ -100,7 +93,11 @@ class _ProfileDialogState extends State<ProfileDialog> {
                       Expanded(child: Text(authProvider.user?.displayName ?? 'Não informado')),
                       IconButton(
                         icon: const Icon(Icons.edit_outlined, size: 20),
-                        onPressed: () => setState(() => _isEditing = true),
+                        onPressed: () {
+                          // Garante que o controller tem o texto mais recente antes de editar
+                          _nameController.text = authProvider.user?.displayName ?? '';
+                          setState(() => _isEditing = true);
+                        },
                         tooltip: 'Editar nome',
                       ),
                     ],

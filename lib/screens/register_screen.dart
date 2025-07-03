@@ -142,10 +142,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                           ],
                         ),
-                        child: const Icon(
-                          Icons.psychology_rounded,
-                          size: 40,
-                          color: Colors.white,
+                        child: Image.asset(
+                          'assets/images/psy_png.png',
+                          fit: BoxFit.contain,
                         ),
                       ).animate().scale(
                         duration: 600.ms,

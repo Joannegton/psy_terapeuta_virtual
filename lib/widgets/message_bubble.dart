@@ -36,10 +36,9 @@ class MessageBubble extends StatelessWidget {
                 color: Theme.of(context).colorScheme.primary,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: const Icon(
-                Icons.psychology_rounded,
-                color: Colors.white,
-                size: 18,
+              child: Image.asset(
+                'assets/images/psy_png.png',
+                fit: BoxFit.contain,
               ),
             ),
             const SizedBox(width: 8),
