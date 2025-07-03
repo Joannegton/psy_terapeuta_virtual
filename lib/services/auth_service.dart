@@ -146,7 +146,9 @@ class AuthService {
       case 'invalid-email':
         return 'O email fornecido é inválido.';
       case 'user-not-found':
+        return 'O email fornecido é inválido.';
       case 'wrong-password':
+        return 'O email fornecido é inválido.';
       case 'invalid-credential':
       // Por razões de segurança, o Firebase agora retorna 'invalid-credential'
       // tanto para "usuário não encontrado" quanto para "senha incorreta".

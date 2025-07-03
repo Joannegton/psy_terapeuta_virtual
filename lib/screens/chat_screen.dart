@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:psy_therapist/screens/login_screen.dart';
 import 'package:psy_therapist/widgets/Perfil_dialog.dart';
 import '../providers/chat_provider.dart';
 import '../widgets/message_bubble.dart';
@@ -289,8 +290,12 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           ElevatedButton(
             onPressed: () {
-              Navigator.pop(context);
               authProvider.signOut();
+              if (mounted) {
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                );
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
