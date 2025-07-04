@@ -3,6 +3,7 @@ lib/firebase_options.dart
 **/google-services.json
 lib/apikey.dart
 key.properties
+functions/.env.psy-terapeuta-virtual-74c73
 
 # Miscellaneous
 *.class

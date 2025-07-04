@@ -8,7 +8,7 @@ class ChatProvider extends ChangeNotifier {
   final List<Message> _messages = [];
   bool _isLoading = false;
   final Uuid _uuid = const Uuid();
-  String? _userId;
+  String? _currentUserId;
   FirestoreService? _firestoreService;
 
   List<Message> get messages => List.unmodifiable(_messages);
@@ -20,9 +20,26 @@ class ChatProvider extends ChangeNotifier {
   static const String _welcomeMessage = 
     "Olá, eu sou o Psy! 👋\n\nEstou aqui para conversar com você sobre como está se sentindo. Este é um espaço seguro onde podemos falar sobre suas emoções, pensamentos e qualquer coisa que esteja em sua mente.\n\nComo está se sentindo hoje?";
 
+  /// Limpa o estado do chat quando o usuário muda (login/logout).
+  /// Este método é chamado pelo `ChangeNotifierProxyProvider` em `main.dart`.
+  void clearChatForNewUser(String? newUserId) {
+    // Só limpa se o ID do usuário realmente mudou.
+    // Isso evita limpezas desnecessárias se o provider for reconstruído por outro motivo.
+    if (_currentUserId != newUserId) {
+      _messages.clear();
+      _isLoading = false;
+      _firestoreService = null; // Reseta o serviço do Firestore
+      _currentUserId = newUserId; // Atualiza o ID do usuário
+
+      // Se o newUserId for nulo (logout), notifica para limpar a UI imediatamente.
+      if (newUserId == null) {
+        notifyListeners();
+      }
+    }
+  }
   // Inicializar chat para usuário específico
   Future<void> initializeChat(String userId) async {
-    _userId = userId;
+    _currentUserId = userId;
     _firestoreService = FirestoreService(sessionId: userId);
     await _loadMessages();
     
@@ -58,7 +75,7 @@ class ChatProvider extends ChangeNotifier {
   }
 
   Future<void> sendMessage(String content) async {
-    if (content.trim().isEmpty || _isLoading || _userId == null) return;
+    if (content.trim().isEmpty || _isLoading || _currentUserId == null) return;
 
 
     // Adicionar mensagem do usuário
@@ -115,7 +132,7 @@ class ChatProvider extends ChangeNotifier {
       _firestoreService?.addMessage(aiMessage); // Salva a resposta da IA
 
       // Salvar analytics
-      await FirestoreService.saveUsageAnalytics(_userId!, {
+      await FirestoreService.saveUsageAnalytics(_currentUserId!, {
         'action': 'message_sent',
         'message_count': _messages.length,
       });

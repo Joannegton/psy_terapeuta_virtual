@@ -1,0 +1,3 @@
+# Adiciona suporte a anúncios Google
+# Veja https://pub.dev/packages/google_mobile_ads para detalhes
+google_mobile_ads: ^5.1.0

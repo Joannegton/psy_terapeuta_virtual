@@ -1,5 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:psy_therapist/errors/errors_utils.dart';
+import 'package:psy_therapist/errors/exceptions.dart';
 import '../models/user.dart';
 
 class AuthService {
@@ -50,17 +52,18 @@ class AuthService {
         email: email,
         password: password,
       );
-      // O usuário não será nulo em caso de sucesso.
-      // Atualizar último login
+      
+      if (credential.user == null) {
+        throw const AuthException('Falha na autenticação');
+      }
+      
       await _updateLastLogin(credential.user!.uid);
 
       return credential;
     } on FirebaseAuthException catch (e) {
-      // Relança para ser tratado na camada superior (AuthProvider)
-      throw e;
+      throw AuthException(ErrorUtils.tratarErroFirebaseAuth(e.code));
     } catch (e) {
-      // Relança outros erros inesperados
-      rethrow;
+      throw AuthException('Erro inesperado: ${e.toString()}');
     }
   }
 

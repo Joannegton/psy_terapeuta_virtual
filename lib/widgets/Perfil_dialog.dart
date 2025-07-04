@@ -37,18 +37,22 @@ class _ProfileDialogState extends State<ProfileDialog> {
 
     // Pega o Navigator antes da chamada assíncrona para evitar usar o context
     // de um widget que não está mais na árvore.
-    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
     final authProvider = context.read<AuthProvider>();
+    final theme = Theme.of(context);
 
     try {
       await authProvider.updateUserName(_nameController.text);
+      if (!mounted) return;
       // Fecha o dialog primeiro
-      navigator.pop();
+      Navigator.of(context).pop();
       // Depois mostra a notificação
-      context.showSnackBar('Nome atualizado com sucesso!');
+      messenger.showSnackBar(const SnackBar(content: Text('Nome atualizado com sucesso!')));
     } catch (e) {
       if (mounted) {
-        context.showSnackBar(authProvider.error ?? 'Erro ao atualizar o nome.', isError: true);
+        messenger.showSnackBar(SnackBar(
+            content: Text(authProvider.error ?? 'Erro ao atualizar o nome.'),
+            backgroundColor: theme.colorScheme.error));
       }
     }
   }

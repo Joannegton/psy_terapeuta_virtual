@@ -1,9 +1,11 @@
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'firebase_options.dart';
 import 'providers/chat_provider.dart';
 import 'providers/auth_provider.dart';
@@ -16,6 +18,12 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  await initializeDateFormatting('pt_BR', null);
+
+
+  // Inicializa o Mobile Ads
+  await MobileAds.instance.initialize();
 
   await FirebaseAppCheck.instance.activate(
     androidProvider: AndroidProvider.debug,
@@ -42,7 +50,14 @@ class PsyApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (context) => AuthProvider(context.read<AuthService>()),
         ),
-        ChangeNotifierProvider(create: (_) => ChatProvider()),
+        ChangeNotifierProxyProvider<AuthProvider, ChatProvider>(
+          create: (_) => ChatProvider(),
+          update: (_, auth, previousChat) {
+            // Quando o usuário muda (login/logout), limpa o histórico de chat anterior.
+            previousChat?.clearChatForNewUser(auth.user?.uid);
+            return previousChat ?? ChatProvider();
+          },
+        ),
       ],
       child: MaterialApp(
         title: 'Psy - Seu Terapeuta Virtual',
